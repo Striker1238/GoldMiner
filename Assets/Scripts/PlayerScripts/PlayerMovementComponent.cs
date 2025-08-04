@@ -3,11 +3,13 @@ using Zenject;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
+[RequireComponent(typeof(PlayerDialogueComponent))]
 public class PlayerMovementComponent : MonoBehaviour
 {
     private IInputSystem input;
     private PlayerStateController controller;
     private Rigidbody2D rb;
+    private PlayerDialogueComponent dialogueComponent;
     [SerializeField]private float speed;
 
     [Inject]
@@ -20,7 +22,8 @@ public class PlayerMovementComponent : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        controller = new PlayerStateController(rb, input, speed);
+        dialogueComponent = GetComponent<PlayerDialogueComponent>();
+        controller = new PlayerStateController(rb, input, speed, dialogueComponent);
     }
 
     void Start() => controller.ChangeStateIdle();

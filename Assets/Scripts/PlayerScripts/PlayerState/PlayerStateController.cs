@@ -3,6 +3,7 @@
 public class PlayerStateController
 {
     private readonly PlayerStateMachine stateMachine = new();
+    public readonly PlayerDialogueComponent dialogueComponent;
     private readonly Rigidbody2D rb;
     private readonly IInputSystem input;
     private readonly float speed;
@@ -10,11 +11,13 @@ public class PlayerStateController
     private readonly MoveState moveState;
     private bool _canControl = true;
 
-    public PlayerStateController(Rigidbody2D rb, IInputSystem input, float speed)
+
+    public PlayerStateController(Rigidbody2D rb, IInputSystem input, float speed, PlayerDialogueComponent dialogueComponent)
     {
         this.rb = rb;
         this.input = input;
         this.speed = speed;
+        this.dialogueComponent = dialogueComponent;
         idleState = new IdleState();
         moveState = new MoveState(rb, input, speed);
     }
@@ -28,6 +31,10 @@ public class PlayerStateController
     public void StartMining(MineableObject target)
     {
         stateMachine.ChangeState(new MiningState(this, target));
+    }
+    public void StartCommunication(NPC target)
+    {
+        stateMachine.ChangeState(new CommunicationState(this, target));
     }
     public void DisableControl() => _canControl = false;
     public void EnableControl() => _canControl = true;
