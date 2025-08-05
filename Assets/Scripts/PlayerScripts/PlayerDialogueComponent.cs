@@ -22,17 +22,14 @@ public class PlayerDialogueComponent : MonoBehaviour
             Debug.LogError("Dialogue UI or dialogueLine is not assigned.");
             return;
         }
-        // Открываем UI с диалогом
+
         dialogueQueue = new Queue<DialogueLine>(dialogue);
         dialogueUI.SetActive(true);
 
-        //Показываем первый месседж диалога
         ShowDialogueLine();
     }
     public void ShowDialogueLine()
     {
-        // Вывод месседжа диалога
-        // Переход к следующей строке диалога
         if(dialogueQueue.Count == 0)
         {
             dialogueUI.SetActive(false);
@@ -47,8 +44,6 @@ public class PlayerDialogueComponent : MonoBehaviour
             npcPortraitImage.sprite = line.portrait;
 
     }
-
-
 
     public void ShowShop(List<ItemBase> items)
     {
