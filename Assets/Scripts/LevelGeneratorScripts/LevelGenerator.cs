@@ -10,8 +10,8 @@ public class LevelGenerator : MonoBehaviour
 {
     [Header("Tiles")]
     public Tilemap tilemap;
-    public TileBase floorTile;
-    public TileBase wallTile;
+    public TilePalette floorTilePalettes;
+    public TilePalette wallTilePalettes;
     public TileBase borderTile;
 
     
@@ -106,7 +106,6 @@ public class LevelGenerator : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                // Проверяем, есть ли вокруг клетки пол, если есть ставим стену
                 if (mapData[x, y] == TileType.None)
                 {
                     bool hasFloor = false;
@@ -162,13 +161,16 @@ public class LevelGenerator : MonoBehaviour
             for (int y = 0; y < height; y++)
             {
                 TileBase tileToSet = null;
+                int mask = 0;
                 switch (mapData[x, y])
                 {
                     case TileType.Floor:
-                        tileToSet = floorTile;
+                        mask = Calculate8Bitmask(x, y, TileType.Wall);
+                        tileToSet = floorTilePalettes.GetTileByBitmask(mask);
                         break;
                     case TileType.Wall:
-                        tileToSet = wallTile;
+                        mask = Calculate8Bitmask(x, y, TileType.Floor);
+                        tileToSet = wallTilePalettes.GetTileByBitmask(mask);
                         break;
                     case TileType.Door:
                         break;
@@ -177,12 +179,15 @@ public class LevelGenerator : MonoBehaviour
                         tileToSet = borderTile;
                         break;
                 }
+
+
                 tilemap.SetTile(new Vector3Int(x, y, 0), tileToSet);
             }
         }
         await Task.CompletedTask;
     }
 
+    
 
 
 
@@ -196,6 +201,17 @@ public class LevelGenerator : MonoBehaviour
                 mapData[x, y] = TileType.None;
             }
         }
+    }
+    private int Calculate8Bitmask(int x, int y, TileType targetType)
+    {
+        int mask = 0;
+
+        if (mapData[x, y + 1] == targetType) mask |= 1; 
+        if (mapData[x + 1, y] == targetType) mask |= 2; 
+        if (mapData[x, y - 1] == targetType) mask |= 4; 
+        if (mapData[x - 1, y] == targetType) mask |= 8; 
+
+        return mask;
     }
 
     /// <summary>
