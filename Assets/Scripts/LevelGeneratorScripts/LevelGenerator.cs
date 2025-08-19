@@ -1,4 +1,4 @@
-
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -16,6 +16,7 @@ public class LevelGenerator : MonoBehaviour
 
     
     [Header("Generator settings")]
+    [SerializeField] private RoomGenerator roomGenerator;
     [SerializeField] private int width = 20;
     [SerializeField] private int height = 20;
     [SerializeField] private int countRooms = 3;
@@ -25,284 +26,68 @@ public class LevelGenerator : MonoBehaviour
     [SerializeField] private Vector2Int roomMinSize = new(3,3);
 
     private int seed;
-    private TileType[,] mapData;
-
-    private List<IRoom> rooms = new List<IRoom>();
+    private Map map;
+    private List<IRoom> rooms;
 
     public void Start()
     {
         StartLevelGeneration();
     }
-    public void StartLevelGeneration()
+    public IEnumerator StartLevelGeneration()
     {
-
         Debug.Log("Starting level generation...");
+
 
         Debug.Log("Clearing existing tiles...");
         tilemap.ClearAllTiles();
-        rooms.Clear();
-        mapData = null;
+        map = null;
+        rooms = null;
+
 
         Debug.Log("Generating new seed...");
-        seed = SeedGenerator.GenerateSeed();
-        Random.InitState(seed);
-        InitializedMapData();
+        SeedGenerator.RegenerateSeed();
+        
 
-        //BorderDrawing();
 
-        Generate();
-    }
-    private async Task Generate()
-    {
-        // 1. Генерируем данные попозиции и размеру для комнат
-        List<RoomData> roomDataList = GenerateNonOverlappingRoomData();
+        map = new Map(width, height, SeedGenerator.Seed);
+        rooms = new List<IRoom>(countRooms);
+        // Генерация комнат
 
-        // 2. Создаем комнаты на основе этих данных
-        foreach (var data in roomDataList)
-        {
-            IRoom room = new RoomBase(seed, data.Position.x, data.Position.y, data.Size.x, data.Size.y);
-            await room.GenerateRoom();
+        Debug.Log("Generating rooms...");
+        RoomGenerator roomGenerator = new RoomGenerator(
+            SeedGenerator.Seed,
+            width,
+            height,
+            roomMaxSize,
+            roomMinSize,
+            countRooms,
+            padding
+        );
+        rooms.AddRange(roomGenerator.Generate().Result);
+        foreach (var room in rooms)
+            map.SetTileType(room);
 
-            for (int x = 0; x < room.Width; x++)
-            {
-                for (int y = 0; y < room.Height; y++)
-                {
-                    int mx = data.Position.x + x;
-                    int my = data.Position.y + y;
-                    if (mx >= 0 && mx < mapData.GetLength(0) && my >= 0 && my < mapData.GetLength(1))
-                    {
-                        mapData[mx, my] = room.RoomData[x, y];
-                    }
-                }
-            }
-            rooms.Add(room);
-        }
-
-        // 3. К каждой комнате создаем маршрут, который будет соединять комнаты
-        await ConnectingRoom();
-
-        // 4. Все комнаты обводим стенами
-        await PerimetrOutline();
-
-        //  Рисуем карту
-        await MapDrawing();
-    }
-
-    private async Task ConnectingRoom()
-    {
-        Debug.Log("Connecting rooms...");
+        Debug.Log("Generating corridors...");
+        CorridorGenerator corridorGenerator = new (corridorWidth);
         for (int i = 0; i < rooms.Count - 1; i++)
         {
             var start = rooms[i].Center;
             var end = rooms[i + 1].Center;
-            GenerateNoisyCorridor(start, end);
+            corridorGenerator.GenerateNoisyCorridor(start, end, ref map);
         }
-        await Task.CompletedTask;
-    }
-    private async Task PerimetrOutline()
-    {
-        Debug.Log("Drawing perimeter outline...");
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                if (mapData[x, y] == TileType.None)
-                {
-                    bool hasFloor = false;
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        for (int dy = -1; dy <= 1; dy++)
-                        {
-                            if (dx == 0 && dy == 0) continue;
-                            int nx = x + dx;
-                            int ny = y + dy;
-                            if (nx >= 0 && nx < width && ny >= 0 && ny < height && mapData[nx, ny] == TileType.Floor)
-                            {
-                                hasFloor = true;
-                                break;
-                            }
-                        }
-                        if (hasFloor) break;
-                    }
-                    if (hasFloor)
-                    {
-                        mapData[x, y] = TileType.Wall;
-                    }
-                }
 
-            }
-        }
-        await Task.CompletedTask;
-    }
+        Debug.Log("Generating outline...");
+        map.PerimetrOutline();
 
-    /*
-    private async Task BorderDrawing()
-    {
-        Debug.Log("Drawing border...");
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                if (x == 0 || x == width - 1 || y == 0 || y == height - 1)
-                {
-                    tilemap.SetTile(new Vector3Int(x, y, 0), borderTile);
-                }
-            }
-        }
-        await Task.CompletedTask;
-    }
-    */
 
-    private async Task MapDrawing()
-    {
         Debug.Log("Drawing map...");
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                TileBase tileToSet = null;
-                int mask = 0;
-                switch (mapData[x, y])
-                {
-                    case TileType.Floor:
-                        mask = Calculate8Bitmask(x, y, TileType.Wall);
-                        tileToSet = floorTilePalettes.GetTileByBitmask(mask);
-                        break;
-                    case TileType.Wall:
-                        mask = Calculate8Bitmask(x, y, TileType.Floor);
-                        tileToSet = wallTilePalettes.GetTileByBitmask(mask);
-                        break;
-                    case TileType.Door:
-                        break;
-                    case TileType.None:
-                    default:
-                        tileToSet = borderTile;
-                        break;
-                }
-
-
-                tilemap.SetTile(new Vector3Int(x, y, 0), tileToSet);
-            }
-        }
-        await Task.CompletedTask;
+        TilemapRenderer tilemapRenderer = new(tilemap, floorTilePalettes, wallTilePalettes, borderTile, map);
+        tilemapRenderer.MapDrawing();
+        yield return null;
     }
 
-    
-
-
-
-    private void InitializedMapData()
+    public void StartLevelGenerationEditor()
     {
-        mapData = new TileType[width, height];
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                mapData[x, y] = TileType.None;
-            }
-        }
-    }
-    private int Calculate8Bitmask(int x, int y, TileType targetType)
-    {
-        int mask = 0;
-
-        if (mapData[x, y + 1] == targetType) mask |= 1; 
-        if (mapData[x + 1, y] == targetType) mask |= 2; 
-        if (mapData[x, y - 1] == targetType) mask |= 4; 
-        if (mapData[x - 1, y] == targetType) mask |= 8; 
-
-        return mask;
-    }
-
-    /// <summary>
-    /// Генерирует коридор между двумя точками с небольшим шумом.
-    /// </summary>
-    /// <param name="start">Начальная позиция</param>
-    /// <param name="end">Конечная позиция</param>
-    private void GenerateNoisyCorridor(Vector2Int start, Vector2Int end)
-    {
-        Debug.Log($"Generating noisy corridor from {start} to {end}");
-        Vector2Int current = start;
-
-        while (current != end)
-        {
-
-            if (Random.value < 0.5f)
-            {
-                current.x += (end.x > current.x) ? 1 : (end.x < current.x ? -1 : 0);
-            }
-            else
-            {
-                current.y += (end.y > current.y) ? 1 : (end.y < current.y ? -1 : 0);
-            }
-
-            int halfWidth = corridorWidth / 2;
-            for (int dx = -halfWidth; dx <= halfWidth; dx++)
-            {
-                for (int dy = -halfWidth; dy <= halfWidth; dy++)
-                {
-                    int nx = current.x + dx;
-                    int ny = current.y + dy;
-                    if (mapData != null && nx >= 0 && nx < mapData.GetLength(0) && ny >= 0 && ny < mapData.GetLength(1))
-                        mapData[nx, ny] = TileType.Floor;
-                }
-            }
-        }
-    }
-    /// <summary>
-    /// Создаем список уникальных точек для комнат.
-    /// </summary>
-    /// <returns> Список уникальных точек</returns>
-    private List<RoomData> GenerateNonOverlappingRoomData()
-    {
-        List<RoomData> roomsData = new();
-        int attempts = 0;
-        int maxAttempts = countRooms * 20;
-
-        while (roomsData.Count < countRooms && attempts < maxAttempts)
-        {
-            int roomWidth = Random.Range(roomMinSize.x, roomMaxSize.x);
-            int roomHeight = Random.Range(roomMinSize.y, roomMaxSize.y);
-
-            int x = Random.Range(1, width - roomWidth - 1);
-            int y = Random.Range(1, height - roomHeight - 1);
-
-            RoomData newRoom = new RoomData
-            {
-                Position = new Vector2Int(x, y),
-                Size = new Vector2Int(roomWidth, roomHeight)
-            };
-
-            RectInt newRect = newRoom.ToRectInt(padding);
-            bool overlaps = false;
-
-            foreach (var existing in roomsData)
-            {
-                if (newRect.Overlaps(existing.ToRectInt(padding)))
-                {
-                    overlaps = true;
-                    break;
-                }
-            }
-
-            if (!overlaps)
-            {
-                roomsData.Add(newRoom);
-            }
-
-            attempts++;
-        }
-
-        return roomsData;
-    }
-    private struct RoomData
-    {
-        public Vector2Int Position;
-        public Vector2Int Size;
-
-        public RectInt ToRectInt(int padding)
-        {
-            return new RectInt(Position.x - padding, Position.y - padding, Size.x + padding * 2, Size.y + padding * 2);
-        }
+        StartCoroutine(StartLevelGeneration());
     }
 }

@@ -12,7 +12,7 @@ public class LevelGeneratorEditor : Editor
         LevelGenerator generator = (LevelGenerator)target;
         if (GUILayout.Button("🔁 Перегенерировать уровень"))
         {
-            generator.StartLevelGeneration();
+            generator.StartLevelGenerationEditor();
         }
     }
 }
