@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 [CreateAssetMenu(menuName = "Items/Tool/Pickaxe")]
-public class PickaxeItem : ItemBase, IEquippableItem
+public class PickaxeItem : Item, IEquippableItem
 {
     [SerializeField] private SlotType slotType = SlotType.Tool;
 

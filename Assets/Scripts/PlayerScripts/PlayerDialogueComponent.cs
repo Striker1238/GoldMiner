@@ -45,7 +45,7 @@ public class PlayerDialogueComponent : MonoBehaviour
 
     }
 
-    public void ShowShop(List<ItemBase> items)
+    public void ShowShop(List<Item> items)
     {
         Debug.Log($"Shop items: {items}");
     }

@@ -1,105 +1,236 @@
-﻿using System.Collections.Generic;
+﻿using NUnit;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using UnityEngine;
 
 public class Inventory : IStorage
 {
-    private string name;
-    private int capacity;
-    private List<ISlot> slots;
+    [SerializeField] private string _name;
+    [SerializeField] private int _capacity;
+    [SerializeField] private List<ISlot> _slots;
 
-    public Inventory() : this("Default Inventory", 3) {}
+    public Inventory() : this("Default Inventory", 1) { }
     public Inventory(string name, int capacity)
     {
-        this.name = name;
-        this.capacity = capacity;
-        slots = new List<ISlot>(capacity);
-        for (int i = 0; i < capacity; i++)
-        {
-            slots.Add(new Slot(i));
-        }
+        _name = name;
+        _capacity = capacity;
+        _slots = new();
 
-    }
-    public string Name => name;
+        for (int i = 0; i < capacity; i++) 
+            _slots.Add(new Slot(i));
 
-    public int Capacity => capacity;
-
-    public List<ISlot> Slots => slots;
-
-    public void AddItem(IItem item, int amount)
-    {
-        if (item == null)
-        {
-            throw new System.ArgumentNullException(nameof(item), "Item cannot be null.");
-        }
-        // Тут проблема есть в том, что при добавлении количества предметов, он может выйти за границу макс.стека
-        var existingSlot = slots.FirstOrDefault(slot => slot.Item != null && slot.Item.Id == item.Id);
-        if (existingSlot != null)
-        {
-            existingSlot.Count += amount;
-            return;
-        }
-
-        var emptySlot = slots.FirstOrDefault(slot => slot.IsEmpty);
-        if (emptySlot != null)
-        {
-            emptySlot.Item = item;
-            emptySlot.Count += amount;
-            return;
-        }
-
-        throw new System.InvalidOperationException("No available slot for the item.");
+        Debug.Log($"Creating inventory '{_name}' with slots/capacity {_slots.Count}/{_capacity}");
     }
 
-    public void ClearStorage() => slots.ForEach(slot => slot.Clear());
-
-
-    public bool ContainsItem(IItem item)
+    public string Name => _name;
+    public int Capacity => _capacity;
+    public List<ISlot> Slots => _slots;
+    public async Task AddItem(IItem item, int amount)
     {
-        if (item == null)
-        {
-            throw new System.ArgumentNullException(nameof(item), "Item cannot be null.");
-        }
-        return slots.Any(slot => slot.Item != null && slot.Item.Id == item.Id);
-    }
+        if (item is null)
+            throw new ArgumentNullException(nameof(item));
+        if (amount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be positive");
 
-    public int GetCount(IItem item) => 
-        slots.Where(slot => slot.Item != null && slot.Item.Id == item.Id)
-            .Sum(slot => slot.Count);
+        if (_slots is null)
+            throw new InvalidOperationException("Slots collection is not initialized");
 
-    public IItem GetItemById(string id) =>
-        slots.FirstOrDefault(slot => slot.Item != null && slot.Item.Id == id)?.Item;
 
-    public void RemoveItem(IItem item, int amount)
-    {
-        if (item == null)
-        {
-            throw new System.ArgumentNullException(nameof(item), "Item cannot be null.");
-        }
+        // 1. Ищем слоты с таким же предметом, не заблокированные и количество меньше чем фулл стак
+        List<ISlot> availableSlots = _slots
+            .Where(s => s.Item?.Equals(item) ?? false && !s.IsLocked && s.Count < (s.Item?.MaxStack ?? 99))
+            .ToList();
 
-        if (GetCount(item) < amount)
+        // 2. Ищем слоты, где предметы отсутствуют
+        availableSlots.AddRange(_slots.Where(s => s.Item is null && !s.IsLocked).ToList());
+
+        Debug.Log($"Total available slots for adding item {item.Name}: {availableSlots.Count}");
+
+        // 3. Проверяем сколько доступно слотов и сколько можем поместить 
+        if (availableSlots.Count <= 0 || availableSlots.Sum(s => (s.Item?.MaxStack ?? 99) - s.Count) < amount)
+            throw new InvalidOperationException($"Not enough space in inventory to add the item.");
+
+
+        // 4. Добавляем предметы в слоты
+        foreach (var s in availableSlots)
         {
-            throw new System.InvalidOperationException("Not enough items to remove.");
-        }
-        var allSlots = slots.Where(slot => slot.Item != null && slot.Item.Id == item.Id).ToList();
-        int remainingToRemove = amount;
-        foreach (var slot in allSlots)
-        {
-            if (remainingToRemove <= 0) break;
-            if (slot.Count > remainingToRemove)
+            int spaceLeft = item.MaxStack - s.Count;
+
+            if (spaceLeft >= amount)
             {
-                slot.Count -= remainingToRemove;
-                remainingToRemove = 0;
+                s.Item = item;
+                s.Count += amount;
+                amount = 0;
+                break;
             }
             else
             {
-                remainingToRemove -= slot.Count;
+                s.Item = item;
+                s.Count += spaceLeft;
+                amount -= spaceLeft;
+            }
+        }
+        
+    }
+
+    public Task ClearStorage()
+    {
+        _slots.ForEach(s => s.Clear());
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> ContainsItem(IItem item)
+    {
+        return Task.FromResult(_slots.Any(s => s.Item?.Equals(item) == true));
+    }
+
+    public Task<bool> ContainsItem(IItem item, int amount)
+    {
+        return Task.FromResult(_slots.Where(s => s.Item?.Equals(item) == true).Sum(s => s.Count) >= amount);
+    }
+
+    public Task<bool> ContainsItem(int id)
+    {
+        return Task.FromResult(_slots.Any(s => s.Item?.Id == id));
+    }
+
+    public Task<bool> ContainsItem(int id, int amount)
+    {
+        return Task.FromResult(_slots.Where(s => s.Item?.Id == id).Sum(s => s.Count) >= amount);
+    }
+
+    public Task<int> GetCount(IItem item)
+    {
+        int totalCount = _slots
+            .Where(s => s.Item?.Equals(item) == true)
+            .Sum(s => s.Count);
+        return Task.FromResult(totalCount);
+    }
+
+    public Task<IItem> GetItemBySlotId(int index)
+    {
+        return Task.FromResult(_slots.FirstOrDefault(s => s.Index == index)?.Item);
+    }
+
+    public Task RemoveItem(IItem item, int amount)
+    {
+        if (item is null)
+            throw new ArgumentNullException(nameof(item));
+
+        if(amount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be positive");
+
+        if(!ContainsItem(item, amount).Result)
+            throw new InvalidOperationException("Not enough items in inventory to remove the specified amount");
+
+
+        _slots.Where(s => s.Item?.Equals(item) == true)
+            .ToList()
+            .ForEach(s =>
+            {
+                if (amount <= 0)
+                    return;
+                if (s.Count > amount)
+                {
+                    s.Count -= amount;
+                    amount = 0;
+                }
+                else
+                {
+                    amount -= s.Count;
+                    s.Clear();
+                }
+            });
+        return Task.CompletedTask;
+    }
+
+
+    public async Task SortItemsById()
+    {
+        await SortItemsBy(slot => slot.Item.Id);
+    }
+
+    public async Task SortItemsByCount(bool descending)
+    {
+        await SortItemsBy(slot => slot.Count, descending);
+    }
+
+    public async Task SortItemsByName()
+    {
+        await SortItemsBy(slot => slot.Item.Name);
+    }
+
+
+    private Task SortItemsBy(Func<ISlot, object> keySelector, bool descending = false)
+    {
+        MergeSameItems();
+
+        //TODO: Это место не оптимально, каждый раз создаем новые слоты! Нужно поравить будет
+        var itemsQuery = _slots
+            .Where(s => !s.IsLocked && s.Item != null)
+            .Select(s => new Slot()
+            {
+                Item = s.Item,
+                Count = s.Count
+            });
+
+        var items = descending
+            ? itemsQuery.OrderByDescending(keySelector).ToList()
+            : itemsQuery.OrderBy(keySelector).ToList();
+
+        foreach (var slot in _slots)
+        {
+            if (!slot.IsLocked)
+                slot.Clear();
+        }
+
+        int index = 0;
+        foreach (var data in items)
+        {
+            while (index < _slots.Count && _slots[index].IsLocked)
+                index++;
+
+            if (index >= _slots.Count)
+                break;
+
+            _slots[index].Item = data.Item;
+            _slots[index].Count = data.Count;
+            index++;
+        }
+
+
+        foreach (var slot in _slots)
+        {
+            Debug.Log($"Slot {slot.Index}: Item = {(slot.Item != null ? slot.Item.Name : "null")}, Count = {slot.Count}, IsLocked = {slot.IsLocked}");
+        }
+        return Task.CompletedTask;
+    }
+    /// <summary>
+    /// Объединяет одинаковые предметы в инвентаре.
+    /// </summary>
+    private void MergeSameItems()
+    {
+        var merged = new Dictionary<int, ISlot>();
+
+        foreach (var slot in _slots)
+        {
+            if (slot.IsLocked || slot.Item == null)
+                continue;
+
+            var id = slot.Item.Id;
+
+            if (!merged.TryGetValue(id, out var mergedSlot))
+            {
+                merged[id] = slot;
+            }
+            else
+            {
+                mergedSlot.Count += slot.Count;
                 slot.Clear();
             }
         }
     }
 
-    public void SortItems()
-    {
-        throw new System.NotImplementedException();
-    }
 }

@@ -10,6 +10,7 @@ public class DesktopInput : IInputSystem
         this.settings = settings;
     }
 
+    
     public Vector2 MovementDirection
     {
         get

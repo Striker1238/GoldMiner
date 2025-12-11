@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEditor.U2D.Aseprite;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -25,7 +26,7 @@ public class Map
         Height = height;
         InitializedMapData();
     }
-
+    private List<Vector2Int> lootPosition = new List<Vector2Int>();
 
 
     /// <summary>
@@ -103,5 +104,28 @@ public class Map
             }
         }
         Debug.Log("Perimeter outline completed.");
+    }
+
+    public Vector2Int GetRandomEmptyPosition()
+    {
+        List<Vector2Int> emptyPositions = new List<Vector2Int>();
+        for (int x = 0; x < Width; x++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                if (Data[x, y] == TileType.Floor && !lootPosition.Contains(new(x,y)))
+                    emptyPositions.Add(new Vector2Int(x, y));
+            }
+        }
+        if (emptyPositions.Count == 0)
+        {
+            Debug.LogWarning("No empty positions found on the map.");
+            return Vector2Int.zero;
+        }
+
+        Vector2Int randomPosition = emptyPositions[Random.Range(0, emptyPositions.Count)];
+        lootPosition.Add(randomPosition);
+        return randomPosition;
+
     }
 }

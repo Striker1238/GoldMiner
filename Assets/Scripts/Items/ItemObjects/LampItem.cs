@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class LampItem : ItemBase, IEquippableItem
+public class LampItem : Item, IEquippableItem
 {
     [SerializeField] private SlotType slotType = SlotType.Tool;
     public SlotType SlotType => slotType;

@@ -15,8 +15,7 @@ public class LevelGenerator : MonoBehaviour
     public TileBase borderTile;
 
     
-    [Header("Generator settings")]
-    [SerializeField] private RoomGenerator roomGenerator;
+    [Header("Generator map settings")]
     [SerializeField] private int width = 20;
     [SerializeField] private int height = 20;
     [SerializeField] private int countRooms = 3;
@@ -25,7 +24,13 @@ public class LevelGenerator : MonoBehaviour
     [SerializeField] private Vector2Int roomMaxSize = new(6,6);
     [SerializeField] private Vector2Int roomMinSize = new(3,3);
 
-    private int seed;
+    [Header("Loot generator settings")]
+    [SerializeField] private int lootCount = 5;
+    /// <summary>
+    /// Словарь, где ключ - количество объектов для спавна, значение - префаб лута
+    /// </summary>
+    [SerializeField] private List<GameObject> lootSpawnPrefabs;
+
     private Map map;
     private List<IRoom> rooms;
 
@@ -83,6 +88,11 @@ public class LevelGenerator : MonoBehaviour
         Debug.Log("Drawing map...");
         TilemapRenderer tilemapRenderer = new(tilemap, floorTilePalettes, wallTilePalettes, borderTile, map);
         tilemapRenderer.MapDrawing();
+
+
+
+        LootGenerator lootGenerator = new ();
+        lootGenerator.GenerateLoot(map,lootSpawnPrefabs,tilemap);
         yield return null;
     }
 
