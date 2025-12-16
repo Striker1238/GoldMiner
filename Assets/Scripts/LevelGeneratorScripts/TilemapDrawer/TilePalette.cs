@@ -20,6 +20,12 @@ public struct TilePalette
 
     public TileBase topLeftInnerCornerTile, topRightInnerCornerTile, bottomLeftInnerCornerTile, bottomRightInnerCornerTile;
 
+    /// <summary>
+    /// Получение тайла по битмаске
+    /// </summary>
+    /// <param name="bitmask">Bit маска, по которой будет возвращен корректный тайл, расчет происходит
+    /// по 8ми битной маской с дополнительным 9ым тайлом под центральный тайл </param>
+    /// <returns></returns>
     public TileBase GetTileByBitmask(int bitmask)
     {
         switch (bitmask)

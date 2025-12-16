@@ -8,7 +8,7 @@ public class TilemapRenderer
     /// <summary>
     /// Тайлмап карты, который будет использоваться для отрисовки карты.
     /// </summary>
-    private Tilemap tilemap;
+    private TilemapLayers tilemaps;
     /// <summary>
     /// Палитра тайлов для пола
     /// </summary>
@@ -26,9 +26,15 @@ public class TilemapRenderer
     /// </summary>
     private Map map;
 
-    public TilemapRenderer(Tilemap tilemap, TilePalette floorTilePalettes, TilePalette wallTilePalettes, TileBase borderTile, Map map)
+    public TilemapRenderer(
+        TilemapLayers tilemaps,
+        TilePalette floorTilePalettes, 
+        TilePalette wallTilePalettes, 
+        TileBase borderTile, 
+        Map map
+        )
     {
-        this.tilemap = tilemap;
+        this.tilemaps = tilemaps;
         this.floorTilePalettes = floorTilePalettes;
         this.wallTilePalettes = wallTilePalettes;
         this.borderTile = borderTile;
@@ -52,21 +58,21 @@ public class TilemapRenderer
                     case TileType.Floor:
                         mask = CalculateBitmask(x, y, TileType.Wall);
                         tileToSet = floorTilePalettes.GetTileByBitmask(mask);
+                        tilemaps.Floor.SetTile(new Vector3Int(x, y, 0), tileToSet);
                         break;
                     case TileType.Wall:
                         mask = CalculateBitmask(x, y, TileType.Floor);
                         tileToSet = wallTilePalettes.GetTileByBitmask(mask);
+                        tilemaps.Walls.SetTile(new Vector3Int(x, y, 0), tileToSet);
                         break;
                     case TileType.Door:
                         break;
                     case TileType.None:
                     default:
                         tileToSet = borderTile;
+                        tilemaps.Walls.SetTile(new Vector3Int(x, y, 0), tileToSet);
                         break;
                 }
-
-
-                tilemap.SetTile(new Vector3Int(x, y, 0), tileToSet);
             }
         }
         Debug.Log("Map drawing completed.");

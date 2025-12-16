@@ -4,7 +4,7 @@ using UnityEngine.Tilemaps;
 
 public class LootGenerator
 {
-    public void GenerateLoot(Map map, List<GameObject> lootSpawnPrefabs, Tilemap tilemap)
+    public void GenerateLoot(Map map, List<LootSpawnData> lootSpawnPrefabs, Tilemap tilemap)
     {
         if (map == null || lootSpawnPrefabs == null || lootSpawnPrefabs.Count == 0)
         {
@@ -13,7 +13,9 @@ public class LootGenerator
         }
         foreach (var loot in lootSpawnPrefabs)
         {
-            for (int i = 0; i < Random.Range(1,3); i++)
+            var countSpawn = loot.lootCount;
+
+            for (int i = 0; i < countSpawn; i++)
             {
                 Vector3Int randomPosition = (Vector3Int)map.GetRandomEmptyPosition();
 
@@ -21,9 +23,10 @@ public class LootGenerator
 
                 Vector3 worldPosition = tilemap.GetCellCenterWorld(randomPosition);
                 GameObject lootInstance = Object.Instantiate(
-                    loot,
+                    loot.lootSpawnPrefabs,
                     worldPosition,
-                    Quaternion.identity);
+                    Quaternion.identity, 
+                    tilemap.transform);
 
             }
         }

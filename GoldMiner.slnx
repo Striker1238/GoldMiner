@@ -1,7 +1,7 @@
 ﻿<Solution>
   <Project Path="Zenject.csproj" />
-  <Project Path="Zenject-Editor.csproj" />
   <Project Path="GameAssembly.csproj" />
+  <Project Path="Zenject-Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="EditMode.csproj" />
 </Solution>

@@ -6,10 +6,14 @@ using UnityEditor.U2D.Aseprite;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// Основной класс генерации уровня, который отвечает за генерацию карты, комнат, коридоров и отрисовку всего этого на тайлмапе.
+/// Данный скрипт размещается на сцене Unity и запускает процесс генерации уровня
+/// </summary>
 public class LevelGenerator : MonoBehaviour
 {
-    [Header("Tiles")]
-    public Tilemap tilemap;
+    public TilemapLayers tilemapLayers;
+
     public TilePalette floorTilePalettes;
     public TilePalette wallTilePalettes;
     public TileBase borderTile;
@@ -25,14 +29,26 @@ public class LevelGenerator : MonoBehaviour
     [SerializeField] private Vector2Int roomMinSize = new(3,3);
 
     [Header("Loot generator settings")]
-    [SerializeField] private int lootCount = 5;
     /// <summary>
-    /// Словарь, где ключ - количество объектов для спавна, значение - префаб лута
+    /// Лист создаваемых предметов на карте в виде структуры с полями количество и объект
     /// </summary>
-    [SerializeField] private List<GameObject> lootSpawnPrefabs;
+    [SerializeField] private List<LootSpawnData> lootSpawnPrefabs;
+
 
     private Map map;
     private List<IRoom> rooms;
+
+    // перенести все генераторы в приватные поля, дабы не было создания каждый раз, когда создается карта
+    //private RoomGenerator roomGenerator;// TODO: добавить метод для обновления параметров о комнатах и мапе в целом
+
+    //TODO Добавить тесты для генерации карты
+
+    public LevelGenerator()
+    {
+
+    }
+
+
 
     public void Start()
     {
@@ -44,20 +60,19 @@ public class LevelGenerator : MonoBehaviour
 
 
         Debug.Log("Clearing existing tiles...");
-        tilemap.ClearAllTiles();
+        tilemapLayers.ClearAllTiles();
         map = null;
         rooms = null;
 
 
         Debug.Log("Generating new seed...");
         SeedGenerator.RegenerateSeed();
-        
 
 
         map = new Map(width, height, SeedGenerator.Seed);
         rooms = new List<IRoom>(countRooms);
-        // Генерация комнат
 
+        // Генерация комнат
         Debug.Log("Generating rooms...");
         RoomGenerator roomGenerator = new RoomGenerator(
             SeedGenerator.Seed,
@@ -69,6 +84,7 @@ public class LevelGenerator : MonoBehaviour
             padding
         );
         rooms.AddRange(roomGenerator.Generate().Result);
+        // Установка тайлов от комнат на карту
         foreach (var room in rooms)
             map.SetTileType(room);
 
@@ -86,18 +102,20 @@ public class LevelGenerator : MonoBehaviour
 
 
         Debug.Log("Drawing map...");
-        TilemapRenderer tilemapRenderer = new(tilemap, floorTilePalettes, wallTilePalettes, borderTile, map);
+        TilemapRenderer tilemapRenderer = new(tilemapLayers, floorTilePalettes, wallTilePalettes, borderTile, map);
         tilemapRenderer.MapDrawing();
 
 
 
         LootGenerator lootGenerator = new ();
-        lootGenerator.GenerateLoot(map,lootSpawnPrefabs,tilemap);
+        lootGenerator.GenerateLoot(map,lootSpawnPrefabs, tilemapLayers.Loot);
         yield return null;
     }
 
+#if UNITY_EDITOR
     public void StartLevelGenerationEditor()
     {
         StartCoroutine(StartLevelGeneration());
     }
+#endif
 }
