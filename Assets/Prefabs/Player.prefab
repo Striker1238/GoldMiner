@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 5546439118278810000}
   - component: {fileID: 3807865735532743067}
   - component: {fileID: 3313297751046022345}
-  - component: {fileID: 581491328626986112}
   - component: {fileID: 2797477179505450515}
   - component: {fileID: 5314919576037546629}
   - component: {fileID: 7496457652573048848}
@@ -191,19 +190,6 @@ MonoBehaviour:
   outlineThickness: 1.5
   interactionIconPrefab: {fileID: 7352931428657276363, guid: 2883bbc3bfd9c9346ac787994b163a6b, type: 3}
   iconOffset: {x: 0, y: 0, z: 0}
---- !u!114 &581491328626986112
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6883995779869566335}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1f0518a0afe8a1543a739b4f14d6f489, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  inputSettings: {fileID: 11400000, guid: 6de63f13830e512459164f22cd9ec562, type: 2}
 --- !u!114 &2797477179505450515
 MonoBehaviour:
   m_ObjectHideFlags: 0
