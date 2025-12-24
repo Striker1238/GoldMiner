@@ -23,7 +23,7 @@ public class RoomGenerator
     /// </summary>
     private int mapWidth = 20;
     /// <summary>
-    /// Макссимальная высота карты
+    /// Максимальная высота карты
     /// </summary>>
     private int mapHeight = 20;
     /// <summary>
@@ -46,13 +46,14 @@ public class RoomGenerator
     }
     public async Task<List<IRoom>> Generate()
     {
+        // Список данных по комнатам, которые можно разместить на карте без пересечений
         List<RoomData> roomDataList = GenerateNonOverlappingRoomData();
         List<IRoom> rooms = new (roomDataList.Count);
 
         foreach (var data in roomDataList)
         {
             IRoom room = new RoomBase(seed, data.Position.x, data.Position.y, data.Size.x, data.Size.y);
-            await room.GenerateRoom();
+            await room.GenerateRoom(); // Отрисовываем пол комнаты, чтобы было ее очертание
             rooms.Add(room);
         }
         Debug.Log($"Generated {rooms.Count} rooms completed!");
@@ -60,20 +61,23 @@ public class RoomGenerator
     }
 
     /// <summary>
-    /// Создаем список уникальных точек для комнат.
+    /// Создаем список уникальных точек для комнат, при которых комнаты не будут пересекаться
     /// </summary>
-    /// <returns> Список уникальных точек</returns>
+    /// <returns> Список уникальных точек в формате RoomData</returns>
     private List<RoomData> GenerateNonOverlappingRoomData()
     {
         List<RoomData> roomsData = new();
         int attempts = 0;
-        int maxAttempts = countRooms * 20;
+        int maxAttempts = countRooms * 20; // Попыток на создание всех комнат
+
 
         while (roomsData.Count < countRooms && attempts < maxAttempts)
         {
+            // Генерируем случайные размеры комнаты
             int roomWidth = Random.Range(roomMinSize.x, roomMaxSize.x+1);
             int roomHeight = Random.Range(roomMinSize.y, roomMaxSize.y+1);
 
+            // Генерируем случайную позицию комнаты
             int x = Random.Range(2, mapWidth - roomWidth - 1);
             int y = Random.Range(2, mapHeight - roomHeight - 1);
 
@@ -83,7 +87,7 @@ public class RoomGenerator
                 Size = new Vector2Int(roomWidth, roomHeight)
             };
 
-            RectInt newRect = newRoom.ToRectInt(padding);
+            RectInt newRect = newRoom.ToRectInt(padding); // Конвертим комнату в RectInt с учетом отступа
             bool overlaps = false;
 
             foreach (var existing in roomsData)

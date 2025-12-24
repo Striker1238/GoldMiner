@@ -25,6 +25,10 @@ public class RoomBase : IRoom
         Height = height;
         RoomData = new TileType[width, height];
     }
+    /// <summary>
+    /// Генерация основы комнаты, заполнение всех ячеек тайлом пола
+    /// </summary>
+    /// <returns>Завершенная задача</returns>
     public virtual Task GenerateRoom()
     {
         Debug.Log($"Generating room at ({X}, {Y}) with size {Width}x{Height}, center: {Center} using seed {Seed}.");
@@ -40,6 +44,13 @@ public class RoomBase : IRoom
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Отрисовка комнаты на тайлмапах, по переданной информации 
+    /// </summary>
+    /// <param name="tiles"></param>
+    /// <param name="ground"></param>
+    /// <param name="walls"></param>
+    /// <returns>Завершенная задача</returns>
     public virtual Task DrawRoom(Dictionary<int,TileBase> tiles, Tilemap ground, Tilemap walls)
     {
         for (int x = 0; x < Width; x++)

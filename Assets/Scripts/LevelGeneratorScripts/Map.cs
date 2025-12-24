@@ -4,6 +4,10 @@ using UnityEditor.U2D.Aseprite;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+
+/// <summary>
+/// Единая карта, которая генерируется путем создания комнат и коридоров, а затем отрисовывается на тайлмапе.
+/// </summary>
 public class Map
 {
     public int Seed { get; private set; }
@@ -43,6 +47,7 @@ public class Map
             }
         }
     }
+
     /// <summary>
     /// Установка типа клетки в заданных координатах на карте размером Width x Height.
     /// </summary>
@@ -50,6 +55,7 @@ public class Map
     /// <param name="y">Позиция клетки на карте по Y</param>
     /// <param name="type">Значение клетки</param>
     public void SetTileType(int x, int y, TileType type) => Data[x, y] = type;
+
     /// <summary>
     /// Установка типа клетки в заданных координатах на карте размером Width x Height, используя данные IRoom.
     /// </summary>
@@ -60,6 +66,7 @@ public class Map
         {
             for (int y = 0; y < room.Height; y++)
             {
+                // Вычисление глобальных координат комнаты на карте
                 int mx = room.X + x;
                 int my = room.Y + y;
                 if (mx >= 0 && mx < Width && my >= 0 && my < Height)
@@ -69,6 +76,7 @@ public class Map
             }
         }
     }
+
     /// <summary>
     /// Генерация периметра карты, обрамление стенами всех клеток, которые являются полом.
     /// </summary>
@@ -106,6 +114,10 @@ public class Map
         Debug.Log("Perimeter outline completed.");
     }
 
+    /// <summary>
+    /// Возвращает случайную пустую позицию на карте для размещения лута.
+    /// </summary>
+    /// <returns></returns>
     public Vector2Int GetRandomEmptyPosition()
     {
         List<Vector2Int> emptyPositions = new List<Vector2Int>();
